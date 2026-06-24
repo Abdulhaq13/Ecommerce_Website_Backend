@@ -110,7 +110,6 @@ const userSchema = new mongoose.Schema(
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12); // 12 = salt rounds
-  next();
 });
 
 // Instance method available on every user document

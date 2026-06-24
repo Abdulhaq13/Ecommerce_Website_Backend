@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import errorHandler from "./middlewares/errorHandler.js";
-
+import userRouter from "./routes/user.routes.js";
 const app = express();
 
 //Body parser
@@ -25,5 +25,8 @@ app.get("/", (req, res) => {
 
 //default error handler
 app.use(errorHandler);
+
+//routes
+app.use("/api/v1/users", userRouter);
 
 export default app;
