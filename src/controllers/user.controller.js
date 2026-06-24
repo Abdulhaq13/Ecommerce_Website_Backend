@@ -183,4 +183,12 @@ const loginUser = asyncHandler(async (req, res) => {
       )
   );
 });
-export { registerUser, verifyEmail, loginUser };
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+  // req.user was attached by verifyJWT — already excludes password/tokens
+  // since those fields are select: false by default on the User model
+  return res
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
+});
+export { registerUser, verifyEmail, loginUser, getCurrentUser };
