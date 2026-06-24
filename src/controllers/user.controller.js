@@ -3,6 +3,7 @@ import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import crypto from "crypto";
+import sendEmail from "../utils/sendEmail.js";
 
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -37,10 +38,31 @@ const registerUser = asyncHandler(async (req, res) => {
     emailVerificationExpiry: verificationExpiry,
   });
 
-  // TODO: send verification email with rawVerificationToken via Nodemailer
-  // (to be implemented in the Nodemailer setup step)
+  //5. Send verification email
+  const verificationUrl = `${process.env.CLIENT_URL}/verify-email/${rawVerificationToken}`;
 
-  //5.Return created user (sensitive fields excluded by select:false)
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: "Verify your email address",
+      html: `
+        <h2>Welcome, ${user.name}!</h2>
+        <p>Thanks for registering. Please verify your email address by clicking the link below: </p>
+        <a href="${verificationUrl}" target="_blank">Verify Email</a>
+        <p>This link will expire in 24 hours</p>
+        <p>If you did not create this account, please ignore this email.</p>
+        `,
+    });
+  } catch (error) {
+    console.log("Email Error:", error);
+    await User.findByIdAndDelete(user._id);
+    throw new ApiError(
+      500,
+      "Something went wrong while sending the verification email. Please try registering again.",
+    );
+  }
+
+  //6.Return created user (sensitive fields excluded by select:false)
   const createdUser = await User.findById(user._id);
 
   if (!createdUser) {
