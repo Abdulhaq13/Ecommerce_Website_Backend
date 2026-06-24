@@ -108,4 +108,79 @@ const verifyEmail = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, {}, "Email verified successfully"));
 });
-export { registerUser, verifyEmail };
+
+const loginUser = asyncHandler(async (req, res) => {
+  // Get email and password from request body
+  const { email, password } = req.body;
+
+  // Check if both fields are provided
+  if (!email || !password) {
+    throw new ApiError(400, "Email and password are required");
+  }
+
+  // Find user by email
+  // password has select: false in schema, so explicitly include it
+  const user = await User.findOne({
+    email: email.toLowerCase(),
+  }).select("+password");
+
+  // If user doesn't exist
+  if (!user) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+
+  // Compare entered password with hashed password stored in DB
+  const isPasswordValid = await user.isPasswordCorrect(password);
+
+  // If password doesn't match
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+
+  // Generate short-lived access token
+  const accessToken = user.generateAccessToken();
+
+  // Generate long-lived refresh token
+  const refreshToken = user.generateRefreshToken();
+
+  // Store refresh token in database
+  // This helps with logout, token rotation, and revoking sessions
+  user.refreshToken = refreshToken;
+
+  // Skip validations because we're only updating refreshToken
+  await user.save({ validateBeforeSave: false });
+
+  // Fetch user again without sensitive fields
+  // password and refreshToken remain excluded because of select: false
+  const loggedInUser = await User.findById(user._id);
+
+  // Common cookie settings
+  const cookieOptions = {
+    httpOnly: true, // JS cannot access cookie
+    secure: process.env.NODE_ENV === "production", // HTTPS only in production
+    sameSite: "strict", // Protection against CSRF
+  };
+
+  return (
+    res
+      .status(200)
+
+      // Store access token in cookie
+      .cookie("accessToken", accessToken, {
+        ...cookieOptions,
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      })
+
+      // Store refresh token in cookie
+      .cookie("refreshToken", refreshToken, {
+        ...cookieOptions,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      })
+
+      // Send success response with user data
+      .json(
+        new ApiResponse(200, { user: loggedInUser }, "Logged in successfully"),
+      )
+  );
+});
+export { registerUser, verifyEmail, loginUser };
