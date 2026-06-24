@@ -4,6 +4,7 @@ import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail.js";
+import jwt from "jsonwebtoken";
 
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -190,5 +191,68 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
+});
+
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookies?.refreshToken;
+
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Refresh token missing - please log in again");
+  }
+
+  let decodedToken;
+  try {
+    decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET,
+    );
+  } catch (error) {
+    throw new ApiError(
+      401,
+      "Invalid or expired refresh token — please log in again",
+    );
+  }
+
+  const user = await User.findById(decodedToken._id).select("+refreshToken");
+  if (!user) {
+    throw new ApiError(401, "Invalid refresh token — please log in again");
+  }
+
+  // Theft/reuse detection: incoming token must exactly match what's stored in DB.
+  // If it doesn't, this token was already rotated out — treat as compromised.
+  if (incomingRefreshToken !== user.refreshToken) {
+    user.refreshToken = undefined;
+    await user.save({ validateBeforeSave: false });
+    throw new ApiError(
+      401,
+      "Refresh token reuse detected — please log in again",
+    );
+  }
+
+  const newAccessToken = user.generateAccessToken();
+  const newRefreshToken = user.generateRefreshToken();
+
+  user.refreshToken = newRefreshToken;
+  await user.save({ validateBeforeSave: false });
+
+  const accessTokenOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 15 * 60 * 1000, //15m — match ACCESS_TOKEN_EXPIRY
+  };
+
+  const refreshTokenOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7d — match REFRESH_TOKEN_EXPIRY
+  };
+
+  return res
+    .status(200)
+    .cookie("accessToken", newAccessToken, accessTokenOptions)
+    .cookie("refreshToken", newRefreshToken, refreshTokenOptions)
+    .json(new ApiResponse(200, {}, "Access token refreshed successfully"));
 });
 export { registerUser, verifyEmail, loginUser, getCurrentUser };

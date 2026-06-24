@@ -13,5 +13,6 @@ router.route("/register").post(registerUser);
 router.route("/verify-email/:token").get(verifyEmail);
 router.route("/login").post(loginUser);
 router.route("/me").get(verifyJWT, getCurrentUser);
+router.route("/refresh-token").post(refreshAccessToken);
 
 export default router;
