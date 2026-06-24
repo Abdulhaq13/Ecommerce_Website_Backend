@@ -260,7 +260,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   // req.user is available because this route is protected by verifyJWT
   await User.findByIdAndUpdate(
     req.user._id,
-    { $unset: { refreshToken: 1 } }, //removes a field completely from the document.
+    //removes a field completely from the document. since after logginf out there is no need to keep refreshToken in database
+    { $unset: { refreshToken: 1 } },
     { new: true },
     //findbyidandupdate returns old document which also returns
     // the refreshToken so we use new to get updated document
@@ -271,11 +272,73 @@ const logoutUser = asyncHandler(async (req, res) => {
     sameSite: "strict",
   };
 
+  return (
+    res
+      .status(200)
+      //clear cookie options should match cookie options in login
+      .clearCookie("accessToken", cookieOptions)
+      .clearCookie("refreshToken", cookieOptions)
+      .json(new ApiResponse(200, {}, "Logged out successfully"))
+  );
+});
+
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    throw new ApiError(400, "Email is required");
+  }
+  const user = await User.findOne({ email: email.toLowerCase() });
+
+  //User enumeration to prevent attackers to know whether the email exist or not we send
+  // same response,status and message regardless of whether the email exist or not
+  if (!user) {
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          {},
+          "If an account with that email exists, a reset link has been sent",
+        ),
+      );
+  }
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(rawToken)
+    .digest("hex");
+
+  user.resetPasswordToken = hashedToken;
+  user.resetPasswordExpiry = Date.now() + 60 * 60 * 1000; //1 hour
+  await user.save({ validateBeforeSave: false });
+
+  const resetUrl = `${process.env.CLIENT_URL}/reset-password/${rawToken}`;
+
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: "Reset your password",
+      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. This link expires in 1 hour.</p><p>If you didn't request this, you can safely ignore this email.</p>`,
+    });
+  } catch (error) {
+    //Roll back the token, but do NOT roll back the user account — unlike
+    // registration, this user already exists; we just failed to email them.
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpiry = undefined;
+    await user.save({ validateBeforeSave: false });
+    throw new ApiError(500, "Failed to send reset email - please try again");
+  }
+
   return res
     .status(200)
-    .clearCookie("accessToken", cookieOptions)
-    .clearCookie("refreshToken", cookieOptions)
-    .json(new ApiResponse(200, {}, "Logged out successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        {},
+        "If an account with that email exists, a reset link has been sent",
+      ),
+    );
 });
 export {
   registerUser,
@@ -284,4 +347,5 @@ export {
   getCurrentUser,
   refreshAccessToken,
   logoutUser,
+  forgotPassword,
 };
