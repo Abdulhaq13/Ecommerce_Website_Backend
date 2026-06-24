@@ -255,4 +255,33 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     .cookie("refreshToken", newRefreshToken, refreshTokenOptions)
     .json(new ApiResponse(200, {}, "Access token refreshed successfully"));
 });
-export { registerUser, verifyEmail, loginUser, getCurrentUser };
+
+const logoutUser = asyncHandler(async (req, res) => {
+  // req.user is available because this route is protected by verifyJWT
+  await User.findByIdAndUpdate(
+    req.user._id,
+    { $unset: { refreshToken: 1 } }, //removes a field completely from the document.
+    { new: true },
+    //findbyidandupdate returns old document which also returns
+    // the refreshToken so we use new to get updated document
+  );
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
+    .json(new ApiResponse(200, {}, "Logged out successfully"));
+});
+export {
+  registerUser,
+  verifyEmail,
+  loginUser,
+  getCurrentUser,
+  refreshAccessToken,
+  logoutUser,
+};

@@ -5,6 +5,8 @@ import {
   verifyEmail,
   loginUser,
   getCurrentUser,
+  refreshAccessToken,
+  logoutUser,
 } from "../controllers/user.controller.js";
 
 const router = Router();
@@ -14,5 +16,6 @@ router.route("/verify-email/:token").get(verifyEmail);
 router.route("/login").post(loginUser);
 router.route("/me").get(verifyJWT, getCurrentUser);
 router.route("/refresh-token").post(refreshAccessToken);
+router.route("/logout").post(verifyJWT, logoutUser);
 
 export default router;
