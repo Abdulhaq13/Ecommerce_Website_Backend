@@ -38,7 +38,7 @@ const registerUser = asyncHandler(async (req, res) => {
     emailVerificationExpiry: verificationExpiry,
   });
 
-  //5. Send verification email
+  //5. Send verification email - here we are sending in params rawToken that can be later used to verify
   const verificationUrl = `${process.env.CLIENT_URL}/verify-email/${rawVerificationToken}`;
 
   try {
@@ -80,4 +80,32 @@ const registerUser = asyncHandler(async (req, res) => {
     );
 });
 
-export { registerUser };
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+
+  if (!token) {
+    throw new ApiError(400, "Verification token is required");
+  }
+  // Hash the incoming raw token to match what's stored in DB
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpiry: { $gt: Date.now() }, //gt = greater than
+  });
+
+  if (!user) {
+    throw new ApiError(400, "Token is invalid or has expired");
+  }
+
+  user.isVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpiry = undefined;
+
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Email verified successfully"));
+});
+export { registerUser, verifyEmail };

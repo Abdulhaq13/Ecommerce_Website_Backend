@@ -108,7 +108,7 @@ const userSchema = new mongoose.Schema(
 // Only re-hashes the password if it was actually changed
 // (prevents re-hashing an already-hashed password on unrelated profile updates)
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 12); // 12 = salt rounds
 });
 
