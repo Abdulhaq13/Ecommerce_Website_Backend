@@ -309,6 +309,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
     .update(rawToken)
     .digest("hex");
 
+  //this creates resetPasswordToken which is declared in user model
   user.resetPasswordToken = hashedToken;
   user.resetPasswordExpiry = Date.now() + 60 * 60 * 1000; //1 hour
   await user.save({ validateBeforeSave: false });
@@ -340,6 +341,39 @@ const forgotPassword = asyncHandler(async (req, res) => {
       ),
     );
 });
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  if (!password) {
+    throw new ApiError(400, "New password is required");
+  }
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpiry: { $gt: Date.now() }.select(
+      "+resetPasswordToken +resetPasswordExpiry",
+    ),
+  });
+
+  if (!user) {
+    throw new ApiError(400, "Invalid or expired reset token");
+  }
+
+  user.password = password;
+
+  //need to remove that reset token and expiry when new password is created
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpiry = undefined;
+
+  user.refreshToken = undefined;
+
+  await user.save();
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password reset successfully"));
+});
 export {
   registerUser,
   verifyEmail,
@@ -348,4 +382,5 @@ export {
   refreshAccessToken,
   logoutUser,
   forgotPassword,
+  resetPassword,
 };
