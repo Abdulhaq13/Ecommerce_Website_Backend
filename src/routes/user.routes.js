@@ -9,6 +9,8 @@ import {
   logoutUser,
   forgotPassword,
   resetPassword,
+  changePassword,
+  deleteAccount,
 } from "../controllers/user.controller.js";
 
 const router = Router();
@@ -21,5 +23,7 @@ router.route("/refresh-token").post(refreshAccessToken);
 router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/forgot-password").post(forgotPassword);
 router.route("/reset-password/:token").post(resetPassword);
+router.route("/change-password").post(verifyJWT, changePassword);
+router.route("/delete-account").delete(verifyJWT, deleteAccount);
 
 export default router;

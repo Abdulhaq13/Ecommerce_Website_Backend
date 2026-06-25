@@ -341,6 +341,7 @@ const forgotPassword = asyncHandler(async (req, res) => {
       ),
     );
 });
+
 const resetPassword = asyncHandler(async (req, res) => {
   const { token } = req.params;
   const { password } = req.body;
@@ -374,6 +375,61 @@ const resetPassword = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, {}, "Password reset successfully"));
 });
+
+const changePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    throw new ApiError(400, "Old password and new password are required");
+  }
+
+  if (oldPassword === newPassword) {
+    throw new ApiError(400, "New password must be different from old password");
+  }
+  //  req.user came from verifyJWT, which does NOT select password — fetch fresh with it
+  const user = await User.findById(req.user._id).select("+password");
+
+  const isPasswordValid = await user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Old password is incorrect");
+  }
+
+  user.password = newPassword; // pre-save hook hashes it
+  user.refreshToken = undefined;
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
+});
+
+const deleteAccount = asyncHandler(async (req, res) => {
+  const { password } = req.body;
+  if (!password) {
+    throw new ApiError(400, "Password is required to delete your account");
+  }
+  const user = await User.findById(req.user._id).select("+password");
+
+  const isPasswordValid = await user.isPasswordCorrect(password);
+
+  if (!isPasswordValid) {
+    throw new ApiError(401, "Incorrect password");
+  }
+  await User.findByIdAndDelete(req.user._id);
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+  return (
+    res.status(200),
+    clearCookie("accessToken", cookieOptions),
+    clearCookie("refreshToken", cookieOptions),
+    json(new ApiResponse(200, {}, "Account deleted successfully"))
+  );
+});
 export {
   registerUser,
   verifyEmail,
@@ -383,4 +439,6 @@ export {
   logoutUser,
   forgotPassword,
   resetPassword,
+  changePassword,
+  deleteAccount,
 };
