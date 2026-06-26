@@ -3,6 +3,7 @@ import ApiError from "../utils/ApiError.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
 
+//"Members Only." If you aren't logged in, you get kicked out immediately.
 export const verifyJWT = asyncHandler(async (req, res, next) => {
   const token = req.cookies?.accessToken;
 

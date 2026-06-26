@@ -5,6 +5,8 @@ import { User } from "../models/user.model.js";
 // leaving req.user unset (treating them as a guest). Useful for public routes
 // that show extra info to logged-in users/admins.
 
+// Everyone is welcome, but members get VIP treatment." Guests get the basic package; logged-in users get the personalized/upgrade package.
+
 const optionalAuth = async (req, res, next) => {
   try {
     const accessToken = req.cookies?.accessToken;
