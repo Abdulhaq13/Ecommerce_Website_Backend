@@ -7,6 +7,13 @@ import { User } from "../models/user.model.js";
 
 // Everyone is welcome, but members get VIP treatment." Guests get the basic package; logged-in users get the personalized/upgrade package.
 
+//  NOTE: this is intentionally NOT wrapped in asyncHandler like verifyJWT is.
+// asyncHandler's whole job is to catch errors and forward them to next(error)
+// so the global error handler can respond with a failure status. That is
+// exactly what we DON'T want here — every failure path below should reach
+// a plain next() (no error), not next(error). So we use our own try/catch
+// instead of asyncHandler on purpose.
+
 const optionalAuth = async (req, res, next) => {
   try {
     const accessToken = req.cookies?.accessToken;
