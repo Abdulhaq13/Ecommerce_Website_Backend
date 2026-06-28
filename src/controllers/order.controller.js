@@ -156,3 +156,25 @@ const getMyOrders = asyncHandler(async (req, res) => {
     ),
   );
 });
+
+// GET /api/v1/orders/:orderId — fetch a single order
+const getOrderById = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
+  const isOwner = order.user.toString() === req.user._id.toString();
+  if (!isOwner && req.user.role !== "admin") {
+    // Same 404 as "doesn't exist" — don't leak that an order belonging to
+    // someone else exists at this id.
+    throw new ApiError(404, "Order not found");
+  }
+  return res.status(200).json(new ApiResponse(200, order, "Order fetched"));
+});
+
+// PATCH /api/v1/orders/:orderId/cancel — customer cancels their own order
