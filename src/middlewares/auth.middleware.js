@@ -23,6 +23,12 @@ export const verifyJWT = asyncHandler(async (req, res, next) => {
   if (!user) {
     throw new ApiError(401, "Invalid access token — user not found");
   }
+
+  // check user deletion status on JWT verification
+  if (!user.isActive) {
+    throw new ApiError(401, "This account has been deactivated");
+  }
+
   req.user = user;
   next();
 });
