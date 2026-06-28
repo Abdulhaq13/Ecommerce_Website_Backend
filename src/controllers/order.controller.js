@@ -178,3 +178,33 @@ const getOrderById = asyncHandler(async (req, res) => {
 });
 
 // PATCH /api/v1/orders/:orderId/cancel — customer cancels their own order
+const cancelOrder = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  const order = await Order.findById(orderId);
+  if (!order || order.user.toString() !== req.user._id.toString()) {
+    throw new ApiError(404, "Order not found");
+  }
+  if (order.status !== "Confirmed") {
+    throw new ApiError(
+      400,
+      `Order cannot be cancelled once it has been ${order.status.toLowerCase()}`,
+    );
+  }
+  // Restock every item — the order never fulfilled, so the stock
+  // reservation made at placeOrder time must be reversed.
+  for (const item of order.items) {
+    await Product.findByIdAndUpdate(item.product, {
+      $inc: { stock: item.quantity },
+    });
+  }
+
+  order.status = "Cancelled";
+  order.cancelledAt = new Date();
+  await order.save();
+
+  return res.status(200).json(new ApiResponse(200, order, "Order cancelled"));
+});
