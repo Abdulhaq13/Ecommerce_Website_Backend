@@ -63,12 +63,7 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
-    // Soft-delete flag, same pattern as isActive on Category/Product.
-    // true = normal active account. Set to false by admin's deleteUser
-    // instead of removing the User document — Orders referencing this
-    // user must remain intact, so the User doc is never hard-deleted
-    // through the admin path. Checked in loginUser and verifyJWT to
-    // block both new logins and use of already-issued tokens.
+    // add soft-delete flag to User schema for admin path
     isActive: {
       type: Boolean,
       default: true,

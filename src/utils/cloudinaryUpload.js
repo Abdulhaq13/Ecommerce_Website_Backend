@@ -1,4 +1,4 @@
-import cloudinary from "../config/cloudinary";
+import cloudinary from "../config/cloudinary.js";
 import fs from "fs";
 
 // Uploads a local file to Cloudinary, then deletes the local temp copy

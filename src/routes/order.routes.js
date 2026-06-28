@@ -7,7 +7,8 @@ import {
   getAllOrders,
   updateOrderStatus,
 } from "../controllers/order.controller.js";
-import { verifyJWT, isAdmin } from "../middlewares/auth.middleware.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { isAdmin } from "../middlewares/role.middleware.js";
 
 const router = Router();
 

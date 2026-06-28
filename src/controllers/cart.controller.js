@@ -94,7 +94,7 @@ const getCart = asyncHandler(async (req, res) => {
 });
 
 // PATCH /api/v1/cart/:productId — set quantity for a specific item
-const updateCartQuantity = asyncHandler(async (req, res) => {
+const updateCartItemQuantity = asyncHandler(async (req, res) => {
   const { productId } = req.params;
   const { quantity } = req.body;
 

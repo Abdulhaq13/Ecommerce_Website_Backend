@@ -30,7 +30,7 @@ categorySchema.pre("save", async function () {
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$)+/g, "");
+      .replace(/(^-|-$)+/g, "");
   }
 });
 
