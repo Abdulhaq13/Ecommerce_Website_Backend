@@ -133,4 +133,26 @@ const getMyOrders = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
   const limit = Math.max(parseInt(req.query.limit) || 10, 1);
   const skip = (page - 1) * limit;
+
+  const filter = { user: req.user._id };
+
+  const [orders, totalOrders] = await Promise.all([
+    Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Order.countDocuments(filter),
+  ]);
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        orders,
+        pagination: {
+          totalOrders,
+          totalPages: Math.ceil(totalOrders / limit),
+          currentPage: page,
+          limit,
+        },
+      },
+      "Orders fetched",
+    ),
+  );
 });
