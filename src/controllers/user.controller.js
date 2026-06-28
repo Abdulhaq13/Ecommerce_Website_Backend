@@ -138,6 +138,16 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Invalid email or password");
   }
 
+  // Block login for soft-deleted (deactivated) accounts. Checked AFTER
+  // password validation so we never reveal account status to someone
+  // who doesn't already know the correct password — the credentials
+  // check itself still uses the generic "Invalid email or password"
+  // message for unknown emails/wrong passwords, only a verified owner
+  // of a deactivated account sees this explicit message.
+  if (!user.isActive) {
+    throw new ApiError(403, "This account has been deactivated");
+  }
+
   // Generate short-lived access token
   const accessToken = user.generateAccessToken();
 
@@ -351,12 +361,18 @@ const resetPassword = asyncHandler(async (req, res) => {
   }
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
+  // FIX: `.select(...)` was previously chained onto `{ $gt: Date.now() }`
+  // itself (a plain object has no .select method) instead of onto the
+  // Mongoose query — this threw a TypeError on every call. `.select()` now
+  // correctly chains onto User.findOne(...). Note resetPasswordToken/
+  // resetPasswordExpiry don't actually need to be re-selected here since
+  // we're filtering BY them in the query (Mongo matches against the stored
+  // value directly) — but selecting them does no harm and keeps the user
+  // doc consistent if this function is ever extended to read them back.
   const user = await User.findOne({
     resetPasswordToken: hashedToken,
-    resetPasswordExpiry: { $gt: Date.now() }.select(
-      "+resetPasswordToken +resetPasswordExpiry",
-    ),
-  });
+    resetPasswordExpiry: { $gt: Date.now() },
+  }).select("+resetPasswordToken +resetPasswordExpiry");
 
   if (!user) {
     throw new ApiError(400, "Invalid or expired reset token");
@@ -425,12 +441,12 @@ const deleteAccount = asyncHandler(async (req, res) => {
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
   };
-  return (
-    res.status(200),
-    clearCookie("accessToken", cookieOptions),
-    clearCookie("refreshToken", cookieOptions),
-    json(new ApiResponse(200, {}, "Account deleted successfully"))
-  );
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
+    .json(new ApiResponse(200, {}, "Account deleted successfully"));
 });
 export {
   registerUser,
