@@ -63,6 +63,17 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    // Soft-delete flag, same pattern as isActive on Category/Product.
+    // true = normal active account. Set to false by admin's deleteUser
+    // instead of removing the User document — Orders referencing this
+    // user must remain intact, so the User doc is never hard-deleted
+    // through the admin path. Checked in loginUser and verifyJWT to
+    // block both new logins and use of already-issued tokens.
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
     // Random token generated at registration, sent in the verification email link
     // select: false -> hidden from normal queries (sensitive)
     emailVerificationToken: {
@@ -107,7 +118,9 @@ const userSchema = new mongoose.Schema(
 // Runs before every .save() call
 // Only re-hashes the password if it was actually changed
 // (prevents re-hashing an already-hashed password on unrelated profile updates)
-userSchema.pre("save", async function (next) {
+// FIX: removed the unused `next` param — per project rule, async pre-save
+// hooks in Mongoose 7+ are promise-based and must not take/call next().
+userSchema.pre("save", async function () {
   if (!this.isModified("password")) return;
   this.password = await bcrypt.hash(this.password, 12); // 12 = salt rounds
 });
