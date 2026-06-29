@@ -1,5 +1,6 @@
 import multer from "multer";
 import path from "path";
+import ApiError from "../utils/ApiError.js";
 // Receive files from users.
 
 // Store file temporarily on local disk before uploading to Cloudinary
@@ -19,7 +20,7 @@ const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
     cb(null, true);
   } else {
-    cb(new Error("Only image files are allowed"), false);
+    cb(new ApiError(400, "Only image files are allowed"), false);
   }
 };
 

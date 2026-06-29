@@ -435,6 +435,7 @@ const deleteAccount = asyncHandler(async (req, res) => {
     .clearCookie("refreshToken", cookieOptions)
     .json(new ApiResponse(200, {}, "Account deleted successfully"));
 });
+
 export {
   registerUser,
   verifyEmail,
