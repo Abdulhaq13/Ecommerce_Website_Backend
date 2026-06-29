@@ -51,7 +51,7 @@ const placeOrder = asyncHandler(async (req, res) => {
   try {
     for (const cartItem of cart.items) {
       const product = cartItem.product;
-      // Product may have been deleted entirely since being added to cart.
+
       if (!product) {
         throw new ApiError(
           400,
@@ -67,8 +67,7 @@ const placeOrder = asyncHandler(async (req, res) => {
           `Only ${product.stock} unit(s) of "${product.name}" left in stock`,
         );
       }
-      // Snapshot exactly what the customer is paying for right now —
-      // this never changes even if the product is edited/deleted later
+
       orderItems.push({
         product: product._id,
         name: product.name,
@@ -77,21 +76,50 @@ const placeOrder = asyncHandler(async (req, res) => {
         quantity: cartItem.quantity,
       });
 
-      // Decrement stock now — this IS the moment stock gets reserved.
-      // (Not at add-to-cart time, since a cart item is not a commitment.)
-      await Product.findByIdAndUpdate(product._id, {
-        $inc: { stock: -cartItem.quantity },
-      });
+      // ==========================================
+      // REPLACE FROM HERE...
+      // ==========================================
+      // Try to decrement stock atomically, but ONLY if there is enough left in the DB right now
+      const updatedProduct = await Product.findOneAndUpdate(
+        {
+          _id: product._id,
+          stock: { $gte: cartItem.quantity }, // Race condition guard
+        },
+        {
+          $inc: { stock: -cartItem.quantity },
+        },
+        { new: true },
+      );
+
+      // If no product was updated, it means another user bought it a millisecond ago
+      if (!updatedProduct) {
+        throw new ApiError(
+          400,
+          `Item "${product.name}" just ran out of stock! Please update your cart.`,
+        );
+      }
+
       decrementedStock.push({
         productId: product._id,
         quantity: cartItem.quantity,
       });
+      // ==========================================
+      // ...TO HERE
+      // ==========================================
     }
   } catch (error) {
-    // Roll back any stock we already decremented in this loop before
-    // re-throwing, so a failed order never leaves products under-stocked.
+    // Robust rollback loop: ensure one bad connection doesn't halt the rest
     for (const { productId, quantity } of decrementedStock) {
-      await Product.findByIdAndUpdate(productId, { $inc: { stock: quantity } });
+      try {
+        await Product.findByIdAndUpdate(productId, {
+          $inc: { stock: quantity },
+        });
+      } catch (rollbackError) {
+        console.error(
+          `CRITICAL: Failed to restock product ${productId}:`,
+          rollbackError,
+        );
+      }
     }
     throw error;
   }
