@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { upload } from "../middlewares/multer.middleware.js";
 import {
   registerUser,
   verifyEmail,
@@ -11,6 +12,7 @@ import {
   resetPassword,
   changePassword,
   deleteAccount,
+  updateProfile,
 } from "../controllers/user.controller.js";
 
 const router = Router();
@@ -25,5 +27,8 @@ router.route("/forgot-password").post(forgotPassword);
 router.route("/reset-password/:token").post(resetPassword);
 router.route("/change-password").post(verifyJWT, changePassword);
 router.route("/delete-account").delete(verifyJWT, deleteAccount);
+router
+  .route("/profile")
+  .patch(verifyJWT, upload.single("avatar"), updateProfile);
 
 export default router;

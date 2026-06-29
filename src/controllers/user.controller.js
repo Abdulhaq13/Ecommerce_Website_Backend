@@ -424,9 +424,15 @@ const deleteAccount = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Incorrect password");
   }
 
-  // NOTE: avatar cleanup deliberately deferred
+  //avatar should be deleted from cloudinary after deletion from database
+
+  const avatarToDelete = user.avatar?.public_id ? user.avatar.public_id : null;
+
   await User.findByIdAndDelete(req.user._id);
 
+  if (avatarToDelete) {
+    await deleteFromCloudinary(avatarToDelete);
+  }
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
