@@ -2,41 +2,41 @@ import { z } from "zod";
 
 const shippingAddressSchema = z.object({
   fullName: z
-    .string({ error: "shippingAddress.fullName is required" })
+    .string({ error: "fullName is required" })
     .trim()
-    .min(1, "shippingAddress.fullName is required"),
+    .min(1, "fullName is required"),
 
   phone: z
-    .string({ error: "shippingAddress.phone is required" })
+    .string({ error: "phone is required" })
     .trim()
-    .min(1, "shippingAddress.phone is required"),
+    .min(1, "phone is required"),
 
   addressLine1: z
-    .string({ error: "shippingAddress.addressLine1 is required" })
+    .string({ error: ".addressLine1 is required" })
     .trim()
-    .min(1, "shippingAddress.addressLine1 is required"),
+    .min(1, "addressLine1 is required"),
 
   addressLine2: z.string().trim().optional(),
 
   city: z
-    .string({ error: "shippingAddress.city is required" })
+    .string({ error: "city is required" })
     .trim()
-    .min(1, "shippingAddress.city is required"),
+    .min(1, "city is required"),
 
   state: z
-    .string({ error: "shippingAddress.state is required" })
+    .string({ error: "state is required" })
     .trim()
-    .min(1, "shippingAddress.state is required"),
+    .min(1, "state is required"),
 
   postalCode: z
-    .string({ error: "shippingAddress.postalCode is required" })
+    .string({ error: "postalCode is required" })
     .trim()
-    .min(1, "shippingAddress.postalCode is required"),
+    .min(1, "postalCode is required"),
 
   country: z
-    .string({ error: "shippingAddress.country is required" })
+    .string({ error: "country is required" })
     .trim()
-    .min(1, "shippingAddress.country is required"),
+    .min(1, "country is required"),
 });
 
 export const placeOrderSchema = z.object({
