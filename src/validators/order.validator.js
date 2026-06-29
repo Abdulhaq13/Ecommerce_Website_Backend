@@ -42,3 +42,9 @@ const shippingAddressSchema = z.object({
 export const placeOrderSchema = z.object({
   shippingAddress: shippingAddressSchema,
 });
+
+export const updateOrderStatusSchema = z.object({
+  status: z.enum(["Confirmed", "Shipped", "Delivered", "Cancelled"], {
+    error: "status must be one of: Confirmed, Shipped, Delivered, Cancelled",
+  }),
+});

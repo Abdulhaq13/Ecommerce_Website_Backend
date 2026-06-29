@@ -10,7 +10,10 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { isAdmin } from "../middlewares/role.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
-import { placeOrderSchema } from "../validators/order.validator.js";
+import {
+  placeOrderSchema,
+  updateOrderStatusSchema,
+} from "../validators/order.validator.js";
 const router = Router();
 
 // Every order route requires a logged-in user.
@@ -24,6 +27,8 @@ router.route("/:orderId/cancel").patch(cancelOrder);
 
 // Admin routes
 router.route("/").get(isAdmin, getAllOrders);
-router.route("/:orderId/status").patch(isAdmin, updateOrderStatus);
+router
+  .route("/:orderId/status")
+  .patch(isAdmin, validate(updateOrderStatusSchema), updateOrderStatus);
 
 export default router;
