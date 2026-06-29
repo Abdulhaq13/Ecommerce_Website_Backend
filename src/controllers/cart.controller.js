@@ -84,6 +84,9 @@ const addToCart = asyncHandler(async (req, res) => {
   }
 
   const populatedCart = await getPopulatedCartForUser(req.user._id);
+  return res
+    .status(200)
+    .json(new ApiResponse(200, populatedCart, "Item added to cart"));
 });
 
 // GET /api/v1/cart — view current user's cart
@@ -114,6 +117,27 @@ const updateCartItemQuantity = asyncHandler(async (req, res) => {
   if (!item) {
     throw new ApiError(404, "Item not found in cart");
   }
+
+  const product = await Product.findById(productId);
+
+  if (!product || !product.isActive) {
+    cart.items = cart.items.filter(
+      (item) => item.product.toString() !== productId,
+    );
+    await cart.save();
+
+    const populatedCart = await getPopulatedCartForUser(req.user._id);
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          populatedCart,
+          "Product is no longer available and was removed from your cart",
+        ),
+      );
+  }
+
   if (product.stock < quantity) {
     throw new ApiError(400, `Only ${product.stock} unit(s) in stock`);
   }
