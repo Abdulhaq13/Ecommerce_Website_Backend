@@ -22,18 +22,26 @@ import {
   resetPasswordSchema,
   changePasswordSchema,
 } from "../validators/user.validator.js";
+import {
+  loginLimiter,
+  registerLimiter,
+  forgotPasswordLimiter,
+  refreshTokenLimiter,
+} from "../middlewares/rateLimiter.middleware.js";
 
 const router = Router();
 
-router.route("/register").post(validate(registerSchema), registerUser);
+router
+  .route("/register")
+  .post(registerLimiter, validate(registerSchema), registerUser);
 router.route("/verify-email/:token").get(verifyEmail);
-router.route("/login").post(validate(loginSchema), loginUser);
+router.route("/login").post(loginLimiter, validate(loginSchema), loginUser);
 router.route("/me").get(verifyJWT, getCurrentUser);
-router.route("/refresh-token").post(refreshAccessToken);
+router.route("/refresh-token").post(refreshTokenLimiter, refreshAccessToken);
 router.route("/logout").post(verifyJWT, logoutUser);
 router
   .route("/forgot-password")
-  .post(validate(forgotPasswordSchema), forgotPassword);
+  .post(forgotPasswordLimiter, validate(forgotPasswordSchema), forgotPassword);
 router
   .route("/reset-password/:token")
   .post(validate(resetPasswordSchema), resetPassword);
