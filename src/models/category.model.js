@@ -24,6 +24,7 @@ const categorySchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+// Auto-creates the slug from the name so the client cannot forge it
 categorySchema.pre("save", async function () {
   if (this.isModified("name")) {
     this.slug = this.name
