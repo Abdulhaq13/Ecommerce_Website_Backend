@@ -26,9 +26,7 @@ const createCategory = asyncHandler(async (req, res) => {
 });
 
 const getAllCategories = asyncHandler(async (req, res) => {
-  const categories = (await Category.find({ isActive: true })).sort({
-    name: 1,
-  });
+  const categories = await Category.find({ isActive: true }).sort({ name: 1 });
 
   return res
     .status(200)
