@@ -9,6 +9,16 @@ const errorHandler = (err, req, res, next) => {
     error = new ApiError(statusCode, message);
   }
 
+  // FIX: Quiet down the terminal for unauthenticated guest traffic (401)
+  if (error.statusCode === 401) {
+    console.log(
+      `[Auth Notice] Guest blocked at ${req.originalUrl}: ${error.message}`,
+    );
+  } else {
+    // Keep printing the full stack trace for real errors (like 500) so you can debug them
+    console.error(error);
+  }
+
   return res.status(error.statusCode).json({
     success: false,
     message: error.message,
