@@ -1,4 +1,5 @@
 import express from "express";
+import "./config/env.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import errorHandler from "./middlewares/errorHandler.js";
@@ -19,7 +20,7 @@ app.use(cookieParser()); //read cookies
 //CORS
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true,
   }),
 );
