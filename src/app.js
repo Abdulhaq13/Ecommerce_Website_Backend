@@ -30,9 +30,6 @@ app.get("/", (req, res) => {
   res.json({ message: "API is running..." });
 });
 
-//default error handler
-app.use(errorHandler);
-
 //routes
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/categories", categoryRouter);
@@ -41,4 +38,6 @@ app.use("/api/v1/cart", cartRouter);
 app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/admin", adminRouter);
 
+//default error handler
+app.use(errorHandler);
 export default app;

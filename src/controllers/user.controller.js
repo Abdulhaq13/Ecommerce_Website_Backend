@@ -363,12 +363,19 @@ const resetPassword = asyncHandler(async (req, res) => {
   const user = await User.findOne({
     resetPasswordToken: hashedToken,
     resetPasswordExpiry: { $gt: Date.now() },
-  }).select("+resetPasswordToken +resetPasswordExpiry");
+  }).select("+resetPasswordToken +resetPasswordExpiry +password");
 
   if (!user) {
     throw new ApiError(400, "Invalid or expired reset token");
   }
-
+  // Check if new password is the same as the old one
+  const isSamePassword = await user.isPasswordCorrect(password);
+  if (isSamePassword) {
+    throw new ApiError(
+      400,
+      "New password must be different from your current password",
+    );
+  }
   user.password = password;
 
   //need to remove that reset token and expiry when new password is created
@@ -377,7 +384,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   user.refreshToken = undefined;
 
-  await user.save();
+  await user.save({ validateBeforeSave: false });
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Password reset successfully"));

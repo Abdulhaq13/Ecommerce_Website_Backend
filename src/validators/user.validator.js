@@ -34,7 +34,7 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  newPassword: newPasswordField,
+  password: newPasswordField,
 });
 
 export const changePasswordSchema = z.object({
