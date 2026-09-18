@@ -8,7 +8,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 const getPopulatedCartForUser = async (userId) => {
   const cart = await Cart.findOne({ user: userId }).populate({
     path: "items.product",
-    select: "name price image stock isActive",
+    select: "name price images stock isActive",
   });
 
   if (!cart) {

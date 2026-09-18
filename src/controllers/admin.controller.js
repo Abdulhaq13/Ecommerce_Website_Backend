@@ -14,6 +14,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
   const filter = {};
   if (req.query.search) {
     // Unified case-insensitive search matching name or email
+    const searchRegex = new RegExp(req.query.search, "i");
     filter.$or = [{ name: searchRegex }, { email: searchRegex }];
   }
 

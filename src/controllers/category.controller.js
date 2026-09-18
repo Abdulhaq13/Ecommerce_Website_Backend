@@ -43,19 +43,22 @@ const updateCategory = asyncHandler(async (req, res) => {
   }
 
   if (name !== undefined) {
-    if (name.trim() === "") {
-      throw new ApiError(404, "Category name cannot be empty");
+    const trimmedName = name.trim();
+    if (trimmedName === "") {
+      throw new ApiError(400, "Category name cannot be empty");
     }
-  }
-  const existingCategory = await Category.findOne({
-    name: name.trim(),
-    _id: { $ne: id }, //"Not Equal": ignore the one I am currently editing right now
-  });
 
-  if (existingCategory) {
-    throw new ApiError(409, "Category with this name already exists");
+    const existingCategory = await Category.findOne({
+      name: trimmedName,
+      _id: { $ne: id },
+    });
+
+    if (existingCategory) {
+      throw new ApiError(409, "Category with this name already exists");
+    }
+
+    category.name = trimmedName;
   }
-  category.name = name.trim();
 
   if (isActive !== undefined) {
     category.isActive = isActive;
