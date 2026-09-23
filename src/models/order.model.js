@@ -19,7 +19,7 @@ const shippingAddressSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    adressLine2: {
+    addressLine2: {
       type: String,
       trim: true,
     },
@@ -66,9 +66,10 @@ const orderItemSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    // Products can be created without images, so an empty string is valid here.
     image: {
       type: String,
-      required: true,
+      default: "",
     },
     quantity: {
       type: Number,

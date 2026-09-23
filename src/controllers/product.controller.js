@@ -3,6 +3,7 @@ import { Category } from "../models/category.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import escapeRegex from "../utils/escapeRegex.js";
 import {
   uploadOnCloudinary,
   deleteFromCloudinary,
@@ -64,9 +65,18 @@ const createProduct = asyncHandler(async (req, res) => {
   });
 
   return res
-    .status(200)
-    .json(new ApiResponse(201, "Product created successfully"));
+    .status(201)
+    .json(new ApiResponse(201, product, "Product created successfully"));
 });
+
+const MAX_PAGE_SIZE = 50;
+
+// Returns a finite number for a query value, or undefined if it's missing/blank/not numeric.
+const toNumber = (value) => {
+  if (value === undefined || value === "") return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+};
 
 const getAllProducts = asyncHandler(async (req, res) => {
   const {
@@ -76,28 +86,32 @@ const getAllProducts = asyncHandler(async (req, res) => {
     maxPrice,
     rating,
     sort,
-    page = 1,
-    limit = 10,
+    page,
+    limit,
   } = req.query;
 
   const filter = { isActive: true };
 
   if (search) {
-    filter.name = { $regex: search, $options: "i" };
+    filter.name = { $regex: escapeRegex(search), $options: "i" };
   }
 
   if (category) {
     filter.category = category;
   }
 
-  if (minPrice !== undefined || maxPrice !== undefined) {
+  // Non-numeric values are ignored rather than crashing the query.
+  const min = toNumber(minPrice);
+  const max = toNumber(maxPrice);
+  if (min !== undefined || max !== undefined) {
     filter.price = {};
-    if (minPrice !== undefined) filter.price.$gte = Number(minPrice);
-    if (maxPrice !== undefined) filter.price.$lte = Number(maxPrice);
+    if (min !== undefined) filter.price.$gte = min;
+    if (max !== undefined) filter.price.$lte = max;
   }
 
-  if (rating !== undefined) {
-    filter.ratingsAverage = { $gte: Number(rating) };
+  const minRating = toNumber(rating);
+  if (minRating !== undefined) {
+    filter.ratingsAverage = { $gte: minRating };
   }
 
   let sortOption = { createdAt: -1 }; //default newest first
@@ -109,8 +123,8 @@ const getAllProducts = asyncHandler(async (req, res) => {
     sortOption = { createdAt: -1 };
   }
 
-  const pageNumber = Math.max(1, Number(page));
-  const limitNumber = Math.max(1, Number(limit));
+  const pageNumber = Math.max(1, parseInt(page) || 1);
+  const limitNumber = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(limit) || 10));
   const skip = (pageNumber - 1) * limitNumber;
 
   const [products, totalProducts] = await Promise.all([

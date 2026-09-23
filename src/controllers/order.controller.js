@@ -159,7 +159,7 @@ const placeOrder = asyncHandler(async (req, res) => {
 // GET /api/v1/orders/my-orders — paginated list of the current user's orders
 const getMyOrders = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
-  const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
   const skip = (page - 1) * limit;
 
   const filter = { user: req.user._id };
@@ -240,7 +240,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
 // GET /api/v1/orders — admin: list all orders, paginated, optional status filter
 const getAllOrders = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
-  const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
   const skip = (page - 1) * limit;
   const filter = {};
   if (req.query.status) {

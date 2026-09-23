@@ -5,6 +5,7 @@ import asyncHandler from "../utils/asyncHandler.js";
 import crypto from "crypto";
 import sendEmail from "../utils/sendEmail.js";
 import jwt from "jsonwebtoken";
+import { Cart } from "../models/cart.model.js";
 import {
   uploadOnCloudinary,
   deleteFromCloudinary,
@@ -436,6 +437,8 @@ const deleteAccount = asyncHandler(async (req, res) => {
   const avatarToDelete = user.avatar?.public_id ? user.avatar.public_id : null;
 
   await User.findByIdAndDelete(req.user._id);
+  // The cart is useless without its owner; orders are kept as purchase history.
+  await Cart.findOneAndDelete({ user: req.user._id });
 
   if (avatarToDelete) {
     await deleteFromCloudinary(avatarToDelete);

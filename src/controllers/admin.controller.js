@@ -4,17 +4,18 @@ import { Cart } from "../models/cart.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import escapeRegex from "../utils/escapeRegex.js";
 
 // GET /api/v1/admin/users — paginated list of all users, optional search by name/email
 const getAllUsers = asyncHandler(async (req, res) => {
   const page = Math.max(parseInt(req.query.page) || 1, 1);
-  const limit = Math.max(parseInt(req.query.limit) || 10, 1);
+  const limit = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
   const skip = (page - 1) * limit;
 
   const filter = {};
   if (req.query.search) {
     // Unified case-insensitive search matching name or email
-    const searchRegex = new RegExp(req.query.search, "i");
+    const searchRegex = new RegExp(escapeRegex(req.query.search), "i");
     filter.$or = [{ name: searchRegex }, { email: searchRegex }];
   }
 
