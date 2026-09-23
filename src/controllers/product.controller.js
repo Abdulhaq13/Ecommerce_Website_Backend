@@ -88,9 +88,12 @@ const getAllProducts = asyncHandler(async (req, res) => {
     sort,
     page,
     limit,
+    includeInactive,
   } = req.query;
 
-  const filter = { isActive: true };
+  // Admins can ask for hidden products too (for the admin product list).
+  const isAdmin = req.user?.role === "admin";
+  const filter = isAdmin && includeInactive === "true" ? {} : { isActive: true };
 
   if (search) {
     filter.name = { $regex: escapeRegex(search), $options: "i" };

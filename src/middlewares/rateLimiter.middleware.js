@@ -56,3 +56,16 @@ export const refreshTokenLimiter = rateLimit({
   legacyHeaders: false,
   validate: { xForwardedForHeader: false },
 });
+
+export const resendVerificationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  keyGenerator: ipAndEmailKey,
+  message: {
+    success: false,
+    message: "Too many verification emails requested. Please try again in 15 minutes.",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
+});

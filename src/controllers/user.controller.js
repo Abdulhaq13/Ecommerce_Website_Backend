@@ -11,6 +11,32 @@ import {
   deleteFromCloudinary,
 } from "../utils/cloudinaryUpload.js";
 
+// Creates a fresh verification token on the user (hashed in DB) and returns the raw one for the link.
+const createEmailVerificationToken = (user) => {
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  user.emailVerificationToken = crypto
+    .createHash("sha256")
+    .update(rawToken)
+    .digest("hex");
+  user.emailVerificationExpiry = Date.now() + 24 * 60 * 60 * 1000; //24 hours
+  return rawToken;
+};
+
+const sendVerificationEmail = (user, rawToken) => {
+  const verificationUrl = `${process.env.CLIENT_URL}/verify-email/${rawToken}`;
+  return sendEmail({
+    to: user.email,
+    subject: "Verify your email address",
+    html: `
+        <h2>Welcome, ${user.name}!</h2>
+        <p>Thanks for registering. Please verify your email address by clicking the link below: </p>
+        <a href="${verificationUrl}" target="_blank">Verify Email</a>
+        <p>This link will expire in 24 hours</p>
+        <p>If you did not create this account, please ignore this email.</p>
+        `,
+  });
+};
+
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -26,39 +52,14 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "User with this email already exist");
   }
 
-  //3.Generate email verifiation token (raw + hashed)
-  const rawVerificationToken = crypto.randomBytes(32).toString("hex");
-  const hashedVerificationToken = crypto
-    .createHash("sha256")
-    .update(rawVerificationToken)
-    .digest("hex");
+  //3.Create user with an email verification token (raw goes in the link, hash in the DB)
+  const user = new User({ name, email, password });
+  const rawVerificationToken = createEmailVerificationToken(user);
+  await user.save();
 
-  const verificationExpiry = Date.now() + 24 * 60 * 60 * 1000; //24 hours
-
-  //4.Create user
-  const user = await User.create({
-    name,
-    email,
-    password,
-    emailVerificationToken: hashedVerificationToken,
-    emailVerificationExpiry: verificationExpiry,
-  });
-
-  //5. Send verification email - here we are sending in params rawToken that can be later used to verify
-  const verificationUrl = `${process.env.CLIENT_URL}/verify-email/${rawVerificationToken}`;
-
+  //4. Send verification email
   try {
-    await sendEmail({
-      to: user.email,
-      subject: "Verify your email address",
-      html: `
-        <h2>Welcome, ${user.name}!</h2>
-        <p>Thanks for registering. Please verify your email address by clicking the link below: </p>
-        <a href="${verificationUrl}" target="_blank">Verify Email</a>
-        <p>This link will expire in 24 hours</p>
-        <p>If you did not create this account, please ignore this email.</p>
-        `,
-    });
+    await sendVerificationEmail(user, rawVerificationToken);
   } catch (error) {
     console.log("Email Error:", error);
     await User.findByIdAndDelete(user._id);
@@ -95,24 +96,61 @@ const verifyEmail = asyncHandler(async (req, res) => {
   // Hash the incoming raw token to match what's stored in DB
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-  const user = await User.findOne({
-    emailVerificationToken: hashedToken,
-    emailVerificationExpiry: { $gt: Date.now() }, //gt = greater than
-  });
+  const user = await User.findOne({ emailVerificationToken: hashedToken }).select(
+    "+emailVerificationExpiry",
+  );
 
   if (!user) {
     throw new ApiError(400, "Token is invalid or has expired");
   }
 
-  user.isVerified = true;
-  user.emailVerificationToken = undefined;
-  user.emailVerificationExpiry = undefined;
+  // The token is kept after use so opening the link again (refresh, double click,
+  // mail scanners, React StrictMode) reports success instead of a false failure.
+  // It can only ever mark this email as verified, so keeping it is harmless.
+  if (user.isVerified) {
+    return res
+      .status(200)
+      .json(new ApiResponse(200, {}, "Your email is already verified"));
+  }
 
+  if (!user.emailVerificationExpiry || user.emailVerificationExpiry <= Date.now()) {
+    throw new ApiError(400, "Token is invalid or has expired");
+  }
+
+  user.isVerified = true;
   await user.save({ validateBeforeSave: false });
 
   return res
     .status(200)
     .json(new ApiResponse(200, {}, "Email verified successfully"));
+});
+
+// POST /api/v1/users/resend-verification — email a fresh verification link
+const resendVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  // Same response whether or not the account exists / is already verified,
+  // so this endpoint can't be used to discover registered emails.
+  const genericResponse = new ApiResponse(
+    200,
+    {},
+    "If that account needs verification, a new link has been sent",
+  );
+
+  const user = await User.findOne({ email: email.toLowerCase() });
+  if (!user || user.isVerified) {
+    return res.status(200).json(genericResponse);
+  }
+
+  const rawToken = createEmailVerificationToken(user);
+  await user.save({ validateBeforeSave: false });
+
+  try {
+    await sendVerificationEmail(user, rawToken);
+  } catch (error) {
+    throw new ApiError(500, "Failed to send verification email - please try again");
+  }
+
+  return res.status(200).json(genericResponse);
 });
 
 const loginUser = asyncHandler(async (req, res) => {
@@ -146,6 +184,15 @@ const loginUser = asyncHandler(async (req, res) => {
   // Checks account status after password verification to prevent email harvesting.
   if (!user.isActive) {
     throw new ApiError(403, "This account has been deactivated");
+  }
+
+  // Block login until the email is confirmed; the client offers a resend link on this code.
+  if (!user.isVerified) {
+    throw new ApiError(
+      403,
+      "Please verify your email before logging in. Check your inbox for the link.",
+      "EMAIL_NOT_VERIFIED",
+    );
   }
 
   // Generate short-lived access token
@@ -518,6 +565,7 @@ const updateShippingAddress = asyncHandler(async (req, res) => {
 
 export {
   updateShippingAddress,
+  resendVerification,
   registerUser,
   verifyEmail,
   loginUser,

@@ -26,7 +26,10 @@ const createCategory = asyncHandler(async (req, res) => {
 });
 
 const getAllCategories = asyncHandler(async (req, res) => {
-  const categories = await Category.find({ isActive: true }).sort({ name: 1 });
+  // Admins can ask for hidden categories too (for the admin category list).
+  const isAdmin = req.user?.role === "admin";
+  const filter = isAdmin && req.query.includeInactive === "true" ? {} : { isActive: true };
+  const categories = await Category.find(filter).sort({ name: 1 });
 
   return res
     .status(200)

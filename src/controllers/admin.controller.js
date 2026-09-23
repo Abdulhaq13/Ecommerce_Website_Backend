@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { User } from "../models/user.model.js";
 import { Cart } from "../models/cart.model.js";
+import { Order } from "../models/order.model.js";
+import { Product } from "../models/product.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -144,4 +146,49 @@ const reactivateUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, targetUser, "User reactivated successfully"));
 });
 
-export { getAllUsers, deleteUser, reactivateUser, changeUserRole };
+const LOW_STOCK_THRESHOLD = 5;
+
+// GET /api/v1/admin/stats — numbers for the admin dashboard overview
+const getDashboardStats = asyncHandler(async (req, res) => {
+  const [statusCounts, revenue, totalCustomers, activeProducts, lowStock, recentOrders] =
+    await Promise.all([
+      Order.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+      // Revenue counts every order that wasn't cancelled (COD: collected on delivery).
+      Order.aggregate([
+        { $match: { status: { $ne: "Cancelled" } } },
+        { $group: { _id: null, total: { $sum: "$itemsTotal" } } },
+      ]),
+      User.countDocuments({ role: "user" }),
+      Product.countDocuments({ isActive: true }),
+      Product.find({ isActive: true, stock: { $lte: LOW_STOCK_THRESHOLD } })
+        .select("name stock images")
+        .sort({ stock: 1 })
+        .limit(10),
+      Order.find()
+        .populate({ path: "user", select: "name email" })
+        .sort({ createdAt: -1 })
+        .limit(5),
+    ]);
+
+  const ordersByStatus = { Confirmed: 0, Shipped: 0, Delivered: 0, Cancelled: 0 };
+  for (const { _id, count } of statusCounts) ordersByStatus[_id] = count;
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        ordersByStatus,
+        totalOrders: Object.values(ordersByStatus).reduce((a, b) => a + b, 0),
+        revenue: revenue[0]?.total ?? 0,
+        totalCustomers,
+        activeProducts,
+        lowStockThreshold: LOW_STOCK_THRESHOLD,
+        lowStock,
+        recentOrders,
+      },
+      "Dashboard stats fetched",
+    ),
+  );
+});
+
+export { getDashboardStats, getAllUsers, deleteUser, reactivateUser, changeUserRole };

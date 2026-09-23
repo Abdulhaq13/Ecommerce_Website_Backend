@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  getDashboardStats,
   getAllUsers,
   deleteUser,
   reactivateUser,
@@ -16,6 +17,7 @@ const router = Router();
 // router level instead of repeating both middlewares on each route.
 router.use(verifyJWT, isAdmin);
 
+router.route("/stats").get(getDashboardStats);
 router.route("/users").get(getAllUsers);
 router.route("/users/:userId/deactivate").patch(deleteUser);
 router.route("/users/:userId/reactivate").patch(reactivateUser);

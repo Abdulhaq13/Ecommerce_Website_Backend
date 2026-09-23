@@ -20,7 +20,7 @@ const router = Router();
 
 router
   .route("/")
-  .get(getAllProducts)
+  .get(optionalAuth, getAllProducts)
   .post(
     verifyJWT,
     isAdmin,

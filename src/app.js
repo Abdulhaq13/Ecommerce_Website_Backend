@@ -1,6 +1,7 @@
 import express from "express";
 import "./config/env.js";
 import cors from "cors";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import errorHandler from "./middlewares/errorHandler.js";
 import userRouter from "./routes/user.routes.js";
@@ -11,6 +12,9 @@ import orderRouter from "./routes/order.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 
 const app = express();
+
+// Security headers (no-sniff, frame blocking, HSTS in browsers, etc.)
+app.use(helmet());
 
 //Body parser
 app.use(express.json()); //reading json data

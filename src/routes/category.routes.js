@@ -8,6 +8,7 @@ import {
 } from "../controllers/category.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { isAdmin } from "../middlewares/role.middleware.js";
+import { optionalAuth } from "../middlewares/optionalAuth.middleware.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
   createCategorySchema,
@@ -15,7 +16,7 @@ import {
 } from "../validators/category.validator.js";
 
 const router = Router();
-router.route("/").get(getAllCategories);
+router.route("/").get(optionalAuth, getAllCategories);
 router
   .route("/")
   .post(verifyJWT, isAdmin, validate(createCategorySchema), createCategory);

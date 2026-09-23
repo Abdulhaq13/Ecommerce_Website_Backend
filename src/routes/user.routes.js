@@ -14,6 +14,7 @@ import {
   deleteAccount,
   updateProfile,
   updateShippingAddress,
+  resendVerification,
 } from "../controllers/user.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
@@ -28,6 +29,7 @@ import {
   loginLimiter,
   registerLimiter,
   forgotPasswordLimiter,
+  resendVerificationLimiter,
   refreshTokenLimiter,
 } from "../middlewares/rateLimiter.middleware.js";
 
@@ -37,6 +39,13 @@ router
   .route("/register")
   .post(registerLimiter, validate(registerSchema), registerUser);
 router.route("/verify-email/:token").get(verifyEmail);
+router
+  .route("/resend-verification")
+  .post(
+    resendVerificationLimiter,
+    validate(forgotPasswordSchema), // same shape: { email }
+    resendVerification,
+  );
 router.route("/login").post(loginLimiter, validate(loginSchema), loginUser);
 router.route("/me").get(verifyJWT, getCurrentUser);
 router.route("/refresh-token").post(refreshTokenLimiter, refreshAccessToken);
