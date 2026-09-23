@@ -72,7 +72,7 @@ const placeOrder = asyncHandler(async (req, res) => {
         product: product._id,
         name: product.name,
         price: product.price,
-        image: product.images?.[0].url ?? "",
+        image: product.images?.[0]?.url ?? "",
         quantity: cartItem.quantity,
       });
 
