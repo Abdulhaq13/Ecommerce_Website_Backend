@@ -13,6 +13,7 @@ import {
   changePassword,
   deleteAccount,
   updateProfile,
+  updateShippingAddress,
 } from "../controllers/user.controller.js";
 import { validate } from "../middlewares/validate.middleware.js";
 import {
@@ -21,6 +22,7 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  updateShippingAddressSchema,
 } from "../validators/user.validator.js";
 import {
   loginLimiter,
@@ -52,5 +54,8 @@ router.route("/delete-account").delete(verifyJWT, deleteAccount);
 router
   .route("/profile")
   .patch(verifyJWT, upload.single("avatar"), updateProfile);
+router
+  .route("/shipping-address")
+  .put(verifyJWT, validate(updateShippingAddressSchema), updateShippingAddress);
 
 export default router;

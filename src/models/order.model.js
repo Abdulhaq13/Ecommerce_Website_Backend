@@ -1,53 +1,5 @@
 import mongoose from "mongoose";
-// Embedded sub-schema for shipping address — validated at the DB level
-// since this is captured once at order time and should never be incomplete.
-
-const shippingAddressSchema = new mongoose.Schema(
-  {
-    fullName: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    phone: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    addressLine1: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    addressLine2: {
-      type: String,
-      trim: true,
-    },
-    city: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    state: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    postalCode: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    country: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-  },
-  {
-    _id: false, // it's a single embedded value, not a list — no need for its own _id
-  },
-);
+import { shippingAddressSchema } from "./shippingAddress.schema.js";
 
 // It locks in the details so that future changes to the store won't alter the customer's past receipt.
 const orderItemSchema = new mongoose.Schema(

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const shippingAddressSchema = z.object({
+export const shippingAddressSchema = z.object({
   fullName: z
     .string({ error: "fullName is required" })
     .trim()

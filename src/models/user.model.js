@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { shippingAddressSchema } from "./shippingAddress.schema.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -61,6 +62,13 @@ const userSchema = new mongoose.Schema(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+
+    // Default delivery address, saved once and reused at checkout.
+    // Optional — but when present, every required address field must be set.
+    shippingAddress: {
+      type: shippingAddressSchema,
+      default: undefined,
     },
 
     // add soft-delete flag to User schema for admin path

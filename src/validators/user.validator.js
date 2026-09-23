@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { shippingAddressSchema } from "./order.validator.js";
 
 const emailField = z
   .string({ error: "Email is required" })
@@ -42,4 +43,8 @@ export const changePasswordSchema = z.object({
     .string({ error: "Current password is required" })
     .min(1, "Current password is required"),
   newPassword: newPasswordField,
+});
+
+export const updateShippingAddressSchema = z.object({
+  shippingAddress: shippingAddressSchema,
 });

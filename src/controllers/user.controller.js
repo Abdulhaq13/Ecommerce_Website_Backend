@@ -501,7 +501,23 @@ const updateProfile = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, safeUser, "Profile updated successfully"));
 });
 
+// PUT /api/v1/users/shipping-address — save the user's default delivery address
+const updateShippingAddress = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    throw new ApiError(404, "User not found");
+  }
+
+  user.shippingAddress = req.body.shippingAddress;
+  await user.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "Shipping address saved"));
+});
+
 export {
+  updateShippingAddress,
   registerUser,
   verifyEmail,
   loginUser,
